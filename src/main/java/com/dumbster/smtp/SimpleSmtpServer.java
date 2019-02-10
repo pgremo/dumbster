@@ -17,7 +17,7 @@
  */
 package com.dumbster.smtp;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -26,15 +26,10 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /** Dummy SMTP server for testing purposes. */
-@Slf4j
 public final class SimpleSmtpServer implements AutoCloseable {
 
 	/** Default SMTP port is 25. */
@@ -47,8 +42,9 @@ public final class SimpleSmtpServer implements AutoCloseable {
 	private static final int STOP_TIMEOUT = 20000;
 
 	private static final Pattern CRLF = Pattern.compile("\r\n");
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(SimpleSmtpServer.class);
 
-	/** Stores all of the email received since this instance started up. */
+    /** Stores all of the email received since this instance started up. */
 	private final List<SmtpMessage> receivedMail;
 
 	/** The server socket this server listens to. */
