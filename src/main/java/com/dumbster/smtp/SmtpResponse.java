@@ -2,7 +2,7 @@
  * Dumbster - a dummy SMTP server
  * Copyright 2016 Joachim Nicolay
  * Copyright 2004 Jason Paul Kitchen
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,46 +21,56 @@ package com.dumbster.smtp;
  * SMTP response container.
  */
 class SmtpResponse {
-	/** Response code - see RFC-2821. */
-	private int code;
-	/** Response message. */
-	private String message;
-	/** New state of the SMTP server once the request has been executed. */
-	private SmtpState nextState;
+    /**
+     * Response code - see RFC-2821.
+     */
+    private int code;
+    /**
+     * Response message.
+     */
+    private String message;
+    /**
+     * New state of the SMTP server once the request has been executed.
+     */
+    private SmtpState nextState;
 
-	/**
-	 * Constructor.
-	 * @param code response code
-	 * @param message response message
-	 * @param next next state of the SMTP server
-	 */
-	SmtpResponse(int code, String message, SmtpState next) {
-		this.code = code;
-		this.message = message;
-		this.nextState = next;
-	}
+    /**
+     * Constructor.
+     *
+     * @param code    response code
+     * @param message response message
+     * @param next    next state of the SMTP server
+     */
+    SmtpResponse(int code, String message, SmtpState next) {
+        this.code = code;
+        this.message = message;
+        this.nextState = next;
+    }
 
-	/**
-	 * Get the response code.
-	 * @return response code
-	 */
-	int getCode() {
-		return code;
-	}
+    /**
+     * Get the response code.
+     *
+     * @return response code
+     */
+    int getCode() {
+        return code;
+    }
 
-	/**
-	 * Get the response message.
-	 * @return response message
-	 */
-	String getMessage() {
-		return message;
-	}
+    /**
+     * Get the response message.
+     *
+     * @return response message
+     */
+    String getMessage() {
+        return message;
+    }
 
-	/**
-	 * Get the next SMTP server state.
-	 * @return state
-	 */
-	SmtpState getNextState() {
-		return nextState;
-	}
+    /**
+     * Get the next SMTP server state.
+     *
+     * @return state
+     */
+    SmtpState getNextState() {
+        return nextState;
+    }
 }
