@@ -20,7 +20,7 @@ package com.dumbster.smtp;
 /**
  * SMTP response container.
  */
-class SmtpResponse {
+class Response {
     /**
      * Response code - see RFC-2821.
      */
@@ -32,7 +32,7 @@ class SmtpResponse {
     /**
      * New state of the SMTP server once the request has been executed.
      */
-    private SmtpState nextState;
+    private State nextState;
 
     /**
      * Constructor.
@@ -41,7 +41,7 @@ class SmtpResponse {
      * @param message response message
      * @param next    next state of the SMTP server
      */
-    SmtpResponse(int code, String message, SmtpState next) {
+    Response(int code, String message, State next) {
         this.code = code;
         this.message = message;
         this.nextState = next;
@@ -70,7 +70,7 @@ class SmtpResponse {
      *
      * @return state
      */
-    SmtpState getNextState() {
+    State getNextState() {
         return nextState;
     }
 }

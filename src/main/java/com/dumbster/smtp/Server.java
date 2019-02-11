@@ -25,16 +25,17 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static java.nio.charset.StandardCharsets.*;
 import static java.util.Collections.*;
+import static org.slf4j.LoggerFactory.*;
 
 /**
  * Dummy SMTP server for testing purposes.
  */
-public final class SimpleSmtpServer implements AutoCloseable {
+public final class Server implements AutoCloseable {
 
     /**
      * Default SMTP port is 25.
@@ -52,12 +53,12 @@ public final class SimpleSmtpServer implements AutoCloseable {
     private static final int STOP_TIMEOUT = 20000;
 
     private static final Pattern CRLF = Pattern.compile("\r\n");
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(SimpleSmtpServer.class);
+    private static final Logger log = getLogger(Server.class);
 
     /**
      * Stores all of the email received since this instance started up.
      */
-    private final List<SmtpMessage> receivedMail;
+    private final List<Message> receivedMail;
 
     /**
      * The server socket this server listens to.
@@ -75,14 +76,14 @@ public final class SimpleSmtpServer implements AutoCloseable {
     private volatile boolean stopped = false;
 
     /**
-     * Creates an instance of a started SimpleSmtpServer.
+     * Creates an instance of a started Server.
      *
      * @param port port number the server should listen to
      * @return a reference to the running SMTP server
      * @throws IOException when listening on the socket causes one
      */
-    public static SimpleSmtpServer start(int port) throws IOException {
-        return new SimpleSmtpServer(new ServerSocket(Math.max(port, 0)));
+    public static Server start(int port) throws IOException {
+        return new Server(new ServerSocket(Math.max(port, 0)));
     }
 
     /**
@@ -91,7 +92,7 @@ public final class SimpleSmtpServer implements AutoCloseable {
      *
      * @param serverSocket socket to listen on
      */
-    private SimpleSmtpServer(ServerSocket serverSocket) {
+    private Server(ServerSocket serverSocket) {
         this.receivedMail = new ArrayList<>();
         this.serverSocket = serverSocket;
         this.workerThread = new Thread(this::performWork);
@@ -106,9 +107,9 @@ public final class SimpleSmtpServer implements AutoCloseable {
     }
 
     /**
-     * @return list of {@link SmtpMessage}s received by since start up or last reset.
+     * @return list of {@link Message}s received by since start up or last reset.
      */
-    public List<SmtpMessage> getReceivedEmails() {
+    public List<Message> getReceivedEmails() {
         synchronized (receivedMail) {
             return unmodifiableList(receivedMail);
         }
@@ -164,8 +165,8 @@ public final class SimpleSmtpServer implements AutoCloseable {
                 // Start server socket and listen for client connections
                 //noinspection resource
                 try (Socket socket = serverSocket.accept();
-                     Scanner input = new Scanner(new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1)).useDelimiter(CRLF);
-                     PrintWriter out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1))) {
+                     Scanner input = new Scanner(new InputStreamReader(socket.getInputStream(), ISO_8859_1)).useDelimiter(CRLF);
+                     PrintWriter out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), ISO_8859_1))) {
 
                     synchronized (receivedMail) {
                         /*
@@ -194,36 +195,34 @@ public final class SimpleSmtpServer implements AutoCloseable {
      *
      * @param out   output stream
      * @param input input stream
-     * @return List of SmtpMessage
+     * @return List of Message
      */
-    private static List<SmtpMessage> handleTransaction(PrintWriter out, Iterator<String> input) {
+    private static List<Message> handleTransaction(PrintWriter out, Iterator<String> input) {
         // Initialize the state machine
-        SmtpState smtpState = SmtpState.CONNECT;
-        SmtpRequest smtpRequest = new SmtpRequest(SmtpActionType.CONNECT, "", smtpState);
+        State state = State.CONNECT;
+        Request smtpRequest = new Request(Action.CONNECT, "", state);
 
         // Execute the connection request
-        SmtpResponse smtpResponse = smtpRequest.execute();
+        Response smtpResponse = smtpRequest.execute();
 
         // Send initial response
         sendResponse(out, smtpResponse);
-        smtpState = smtpResponse.getNextState();
+        state = smtpResponse.getNextState();
 
-        List<SmtpMessage> msgList = new ArrayList<>();
-        SmtpMessage msg = new SmtpMessage();
+        List<Message> msgList = new ArrayList<>();
+        Message msg = new Message();
 
-        while (smtpState != SmtpState.CONNECT) {
+        while (state != State.CONNECT) {
             String line = input.next();
 
-            if (line == null) {
-                break;
-            }
+            if (line == null) break;
 
             // Create request from client input and current state
-            SmtpRequest request = SmtpRequest.createRequest(line, smtpState);
+            Request request = Request.createRequest(line, state);
             // Execute request and create response object
-            SmtpResponse response = request.execute();
+            Response response = request.execute();
             // Move to next internal state
-            smtpState = response.getNextState();
+            state = response.getNextState();
             // Send response to client
             sendResponse(out, response);
 
@@ -232,9 +231,9 @@ public final class SimpleSmtpServer implements AutoCloseable {
             msg.store(response, params);
 
             // If message reception is complete save it
-            if (smtpState == SmtpState.QUIT) {
+            if (state == State.QUIT) {
                 msgList.add(msg);
-                msg = new SmtpMessage();
+                msg = new Message();
             }
         }
 
@@ -245,13 +244,13 @@ public final class SimpleSmtpServer implements AutoCloseable {
      * Send response to client.
      *
      * @param out          socket output stream
-     * @param smtpResponse response object
+     * @param response response object
      */
-    private static void sendResponse(PrintWriter out, SmtpResponse smtpResponse) {
-        if (smtpResponse.getCode() > 0) {
-            int code = smtpResponse.getCode();
-            String message = smtpResponse.getMessage();
-            out.print(code + " " + message + "\r\n");
+    private static void sendResponse(PrintWriter out, Response response) {
+        if (response.getCode() > 0) {
+            int code = response.getCode();
+            String message = response.getMessage();
+            out.print(String.format("%d %s\r\n", code, message));
             out.flush();
         }
     }

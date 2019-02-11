@@ -19,12 +19,13 @@ package com.dumbster.smtp;
 
 import java.util.*;
 
+import static com.dumbster.smtp.State.*;
 import static java.util.Collections.*;
 
 /**
  * Container for a complete SMTP message - headers and message body.
  */
-public class SmtpMessage {
+public class Message {
     /**
      * Headers: Map of List of String hashed on header name.
      */
@@ -37,29 +38,28 @@ public class SmtpMessage {
     /**
      * Constructor. Initializes headers Map and body buffer.
      */
-    public SmtpMessage() {
+    public Message() {
         headers = new LinkedHashMap<>(10);
         body = new StringBuilder();
     }
 
     /**
-     * Update the headers or body depending on the SmtpResponse object and line of input.
+     * Update the headers or body depending on the Response object and line of input.
      *
-     * @param response SmtpResponse object
+     * @param response Response object
      * @param params   remainder of input line after SMTP command has been removed
      */
-    public void store(SmtpResponse response, String params) {
-        if (params != null) {
-            if (SmtpState.DATA_HDR.equals(response.getNextState())) {
-                int headerNameEnd = params.indexOf(':');
-                if (headerNameEnd >= 0) {
-                    String name = params.substring(0, headerNameEnd).trim();
-                    String value = params.substring(headerNameEnd + 1).trim();
-                    addHeader(name, value);
-                }
-            } else if (SmtpState.DATA_BODY == response.getNextState()) {
-                body.append(params);
+    public void store(Response response, String params) {
+        if (params == null) return;
+        if (response.getNextState() == DATA_HDR) {
+            int headerNameEnd = params.indexOf(':');
+            if (headerNameEnd >= 0) {
+                String name = params.substring(0, headerNameEnd).trim();
+                String value = params.substring(headerNameEnd + 1).trim();
+                addHeader(name, value);
             }
+        } else if (response.getNextState() == DATA_BODY) {
+            body.append(params);
         }
     }
 
@@ -80,11 +80,7 @@ public class SmtpMessage {
      */
     public List<String> getHeaderValues(String name) {
         List<String> values = headers.get(name);
-        if (values == null || values.isEmpty()) {
-            return emptyList();
-        } else {
-            return unmodifiableList(values);
-        }
+        return values == null ? emptyList() : unmodifiableList(values);
     }
 
     /**
@@ -95,11 +91,7 @@ public class SmtpMessage {
      */
     public String getHeaderValue(String name) {
         List<String> values = headers.get(name);
-        if (values == null) {
-            return null;
-        } else {
-            return values.get(0);
-        }
+        return values == null ? null : values.get(0);
     }
 
     /**
@@ -118,21 +110,20 @@ public class SmtpMessage {
      * @param value header value
      */
     private void addHeader(String name, String value) {
-        List<String> valueList = headers.computeIfAbsent(name, k -> new ArrayList<>(1));
-        valueList.add(value);
+        headers.computeIfAbsent(name, k -> new ArrayList<>(1)).add(value);
     }
 
     /**
-     * String representation of the SmtpMessage.
+     * String representation of the Message.
      *
      * @return a String
      */
     @Override
     public String toString() {
         StringBuilder msg = new StringBuilder();
-        for (Map.Entry<String, List<String>> stringListEntry : headers.entrySet()) {
-            for (String value : stringListEntry.getValue()) {
-                msg.append(stringListEntry.getKey());
+        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+            for (String value : entry.getValue()) {
+                msg.append(entry.getKey());
                 msg.append(": ");
                 msg.append(value);
                 msg.append('\n');
