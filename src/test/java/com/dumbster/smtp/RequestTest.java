@@ -2,7 +2,7 @@
  * Dumbster - a dummy SMTP server
  * Copyright 2016 Joachim Nicolay
  * Copyright 2004 Jason Paul Kitchen
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,61 +18,62 @@
 
 package com.dumbster.smtp;
 
-import org.junit.Test;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 
 public class RequestTest {
 
-	@Test
-	public void testUnrecognizedCommandConnectState() {
-		Request request = new Request(Action.UNRECOG, null, State.CONNECT);
-		Response response = request.execute();
-		assertThat(response.getCode(), is(500));
-	}
+    @Test
+    public void testUnrecognizedCommandConnectState() {
+        var request = new Request(Action.UNRECOG, null, State.CONNECT);
+        var response = request.execute();
+        assertEquals(500, response.code());
+    }
 
-	@Test
-	public void testUnrecognizedCommandGreetState() {
-		Request request = new Request(Action.UNRECOG, null, State.GREET);
-		Response response = request.execute();
-		assertThat(response.getCode(), is(500));
-	}
+    @Test
+    public void testUnrecognizedCommandGreetState() {
+        var request = new Request(Action.UNRECOG, null, State.GREET);
+        var response = request.execute();
+        assertEquals(500, response.code());
+    }
 
-	@Test
-	public void testUnrecognizedCommandMailState() {
-		Request request = new Request(Action.UNRECOG, null, State.MAIL);
-		Response response = request.execute();
-		assertThat(response.getCode(), is(500));
-	}
+    @Test
+    public void testUnrecognizedCommandMailState() {
+        var request = new Request(Action.UNRECOG, null, State.MAIL);
+        var response = request.execute();
+        assertEquals(500, response.code());
+    }
 
-	@Test
-	public void testUnrecognizedCommandQuitState() {
-		Request request = new Request(Action.UNRECOG, null, State.QUIT);
-		Response response = request.execute();
-		assertThat(response.getCode(), is(500));
-	}
+    @Test
+    public void testUnrecognizedCommandQuitState() {
+        var request = new Request(Action.UNRECOG, null, State.QUIT);
+        var response = request.execute();
+        assertEquals(500, response.code());
+    }
 
-	@Test
-	public void testUnrecognizedCommandRcptState() {
-		Request request = new Request(Action.UNRECOG, null, State.RCPT);
-		Response response = request.execute();
-		assertThat(response.getCode(), is(500));
-	}
+    @Test
+    public void testUnrecognizedCommandRcptState() {
+        var request = new Request(Action.UNRECOG, null, State.RCPT);
+        var response = request.execute();
+        assertEquals(500, response.code());
+    }
 
-	@Test
-	public void testUnrecognizedCommandDataBodyState() {
-		Request request = new Request(Action.UNRECOG, null, State.DATA_BODY);
-		Response response = request.execute();
-		assertThat(response.getCode(), is(-1));
-	}
+    @Test
+    public void testUnrecognizedCommandDataBodyState() {
+        var request = new Request(Action.UNRECOG, null, State.DATA_BODY);
+        var response = request.execute();
+        assertEquals(-1, response.code());
+    }
 
-	@Test
-	public void testUnrecognizedCommandDataHdrState() {
-		Request request = new Request(Action.UNRECOG, null, State.DATA_HDR);
-		Response response = request.execute();
-		assertThat(response.getCode(), is(-1));
-	}
+    @Test
+    public void testUnrecognizedCommandDataHdrState() {
+        var request = new Request(Action.UNRECOG, null, State.DATA_HDR);
+        var response = request.execute();
+        assertEquals(-1, response.code());
+    }
 
 
 }

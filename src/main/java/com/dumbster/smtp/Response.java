@@ -19,58 +19,10 @@ package com.dumbster.smtp;
 
 /**
  * SMTP response container.
+ *
+ * @param code      Response code - see RFC-2821.
+ * @param message   Response message.
+ * @param nextState New state of the SMTP server once the request has been executed.
  */
-class Response {
-    /**
-     * Response code - see RFC-2821.
-     */
-    private int code;
-    /**
-     * Response message.
-     */
-    private String message;
-    /**
-     * New state of the SMTP server once the request has been executed.
-     */
-    private State nextState;
-
-    /**
-     * Constructor.
-     *
-     * @param code    response code
-     * @param message response message
-     * @param next    next state of the SMTP server
-     */
-    Response(int code, String message, State next) {
-        this.code = code;
-        this.message = message;
-        this.nextState = next;
-    }
-
-    /**
-     * Get the response code.
-     *
-     * @return response code
-     */
-    int getCode() {
-        return code;
-    }
-
-    /**
-     * Get the response message.
-     *
-     * @return response message
-     */
-    String getMessage() {
-        return message;
-    }
-
-    /**
-     * Get the next SMTP server state.
-     *
-     * @return state
-     */
-    State getNextState() {
-        return nextState;
-    }
+public record Response(int code, String message, State nextState) {
 }

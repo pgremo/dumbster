@@ -29,11 +29,11 @@ public class Message {
     /**
      * Headers: Map of List of String hashed on header name.
      */
-    private Map<String, List<String>> headers;
+    private final Map<String, List<String>> headers;
     /**
      * Message body.
      */
-    private StringBuilder body;
+    private final StringBuilder body;
 
     /**
      * Constructor. Initializes headers Map and body buffer.
@@ -51,14 +51,14 @@ public class Message {
      */
     public void store(Response response, String params) {
         if (params == null) return;
-        if (response.getNextState() == DATA_HDR) {
-            int headerNameEnd = params.indexOf(':');
+        if (response.nextState() == DATA_HDR) {
+            var headerNameEnd = params.indexOf(':');
             if (headerNameEnd >= 0) {
-                String name = params.substring(0, headerNameEnd).trim();
-                String value = params.substring(headerNameEnd + 1).trim();
+                var name = params.substring(0, headerNameEnd).trim();
+                var value = params.substring(headerNameEnd + 1).trim();
                 addHeader(name, value);
             }
-        } else if (response.getNextState() == DATA_BODY) {
+        } else if (response.nextState() == DATA_BODY) {
             body.append(params);
         }
     }
@@ -79,7 +79,7 @@ public class Message {
      * @return value(s) associated with the header name
      */
     public List<String> getHeaderValues(String name) {
-        List<String> values = headers.get(name);
+        var values = headers.get(name);
         return values == null ? emptyList() : unmodifiableList(values);
     }
 
@@ -90,8 +90,8 @@ public class Message {
      * @return first value associated with the header name
      */
     public String getHeaderValue(String name) {
-        List<String> values = headers.get(name);
-        return values == null ? null : values.get(0);
+        var values = headers.get(name);
+        return values == null ? null : values.getFirst();
     }
 
     /**
@@ -120,8 +120,8 @@ public class Message {
      */
     @Override
     public String toString() {
-        StringBuilder msg = new StringBuilder();
-        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+        var msg = new StringBuilder();
+        for (var entry : headers.entrySet()) {
             for (String value : entry.getValue()) {
                 msg.append(entry.getKey());
                 msg.append(": ");

@@ -24,13 +24,16 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Scanner;
 import java.util.regex.Pattern;
 
-import static java.nio.charset.StandardCharsets.*;
-import static java.util.Collections.*;
-import static org.slf4j.LoggerFactory.*;
+import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.util.Collections.unmodifiableList;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Dummy SMTP server for testing purposes.
@@ -128,9 +131,7 @@ public final class Server implements AutoCloseable {
      * Stops the server. Server is shutdown after processing of the current request is complete.
      */
     public void stop() {
-        if (stopped) {
-            return;
-        }
+        if (stopped) return;
         // Mark us closed
         stopped = true;
         try {
@@ -163,10 +164,9 @@ public final class Server implements AutoCloseable {
             // Server: loop until stopped
             while (!stopped) {
                 // Start server socket and listen for client connections
-                //noinspection resource
-                try (Socket socket = serverSocket.accept();
-                     Scanner input = new Scanner(new InputStreamReader(socket.getInputStream(), ISO_8859_1)).useDelimiter(CRLF);
-                     PrintWriter out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), ISO_8859_1))) {
+                try (var socket = serverSocket.accept();
+                     var input = new Scanner(new InputStreamReader(socket.getInputStream(), ISO_8859_1)).useDelimiter(CRLF);
+                     var out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), ISO_8859_1))) {
 
                     synchronized (receivedMail) {
                         /*
@@ -179,13 +179,12 @@ public final class Server implements AutoCloseable {
             }
         } catch (Exception e) {
             // SocketException expected when stopping the server
-            if (!stopped) {
-                log.error("hit exception when running server", e);
-                try {
-                    serverSocket.close();
-                } catch (IOException ex) {
-                    log.error("and one when closing the port", ex);
-                }
+            if (stopped) return;
+            log.error("hit exception when running server", e);
+            try {
+                serverSocket.close();
+            } catch (IOException ex) {
+                log.error("and one when closing the port", ex);
             }
         }
     }
@@ -199,36 +198,35 @@ public final class Server implements AutoCloseable {
      */
     private static List<Message> handleTransaction(PrintWriter out, Iterator<String> input) {
         // Initialize the state machine
-        State state = State.CONNECT;
-        Request smtpRequest = new Request(Action.CONNECT, "", state);
+        var state = State.CONNECT;
+        var smtpRequest = new Request(Action.CONNECT, "", state);
 
         // Execute the connection request
-        Response smtpResponse = smtpRequest.execute();
+        var smtpResponse = smtpRequest.execute();
 
         // Send initial response
         sendResponse(out, smtpResponse);
-        state = smtpResponse.getNextState();
+        state = smtpResponse.nextState();
 
-        List<Message> msgList = new ArrayList<>();
-        Message msg = new Message();
+        var msgList = new ArrayList<Message>();
+        var msg = new Message();
 
         while (state != State.CONNECT) {
-            String line = input.next();
+            var line = input.next();
 
             if (line == null) break;
 
             // Create request from client input and current state
-            Request request = Request.createRequest(line, state);
+            var request = Request.createRequest(line, state);
             // Execute request and create response object
-            Response response = request.execute();
+            var response = request.execute();
             // Move to next internal state
-            state = response.getNextState();
+            state = response.nextState();
             // Send response to client
             sendResponse(out, response);
 
             // Store input in message
-            String params = request.params;
-            msg.store(response, params);
+            msg.store(response, request.params);
 
             // If message reception is complete save it
             if (state == State.QUIT) {
@@ -243,15 +241,14 @@ public final class Server implements AutoCloseable {
     /**
      * Send response to client.
      *
-     * @param out          socket output stream
+     * @param out      socket output stream
      * @param response response object
      */
     private static void sendResponse(PrintWriter out, Response response) {
-        if (response.getCode() > 0) {
-            int code = response.getCode();
-            String message = response.getMessage();
-            out.print(String.format("%d %s\r\n", code, message));
-            out.flush();
-        }
+        if (response.code() <= 0) return;
+        var code = response.code();
+        var message = response.message();
+        out.print(format("%d %s\r\n", code, message));
+        out.flush();
     }
 }

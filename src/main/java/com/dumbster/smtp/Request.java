@@ -46,11 +46,11 @@ class Request {
     /**
      * SMTP action received from client.
      */
-    private Action action;
+    private final Action action;
     /**
      * Current state of the SMTP state table.
      */
-    private State state;
+    private final State state;
     /**
      * Additional information passed from the client with the SMTP action.
      */
@@ -168,7 +168,7 @@ class Request {
         if (state == State.DATA_HDR) {
             if (s.equals(".")) {
                 action = Action.DATA_END;
-            } else if (s.length() < 1) {
+            } else if (s.isEmpty()) {
                 action = Action.BLANK_LINE;
             } else {
                 action = Action.UNRECOG;
@@ -179,7 +179,7 @@ class Request {
                 action = Action.DATA_END;
             } else {
                 action = Action.UNRECOG;
-                if (s.length() < 1) {
+                if (s.isEmpty()) {
                     params = "\n";
                 } else {
                     params = s;

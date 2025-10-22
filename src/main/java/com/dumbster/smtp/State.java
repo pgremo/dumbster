@@ -26,7 +26,7 @@ enum State {
      */
     CONNECT,
     /**
-     * GREET state: wating for a ELHO message.
+     * GREET state: waiting for a ELHO message.
      */
     GREET,
     /**
