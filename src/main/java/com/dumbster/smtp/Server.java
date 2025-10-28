@@ -17,7 +17,6 @@
  */
 package com.dumbster.smtp;
 
-import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -28,12 +27,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.Collections.unmodifiableList;
-import static org.slf4j.LoggerFactory.getLogger;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 /**
  * Dummy SMTP server for testing purposes.
@@ -56,7 +57,7 @@ public final class Server implements AutoCloseable {
     private static final int STOP_TIMEOUT = 20000;
 
     private static final Pattern CRLF = Pattern.compile("\r\n");
-    private static final Logger log = getLogger(Server.class);
+    private static final Logger log = Logger.getLogger(Server.class.getName());
 
     /**
      * Stores all of the email received since this instance started up.
@@ -138,13 +139,13 @@ public final class Server implements AutoCloseable {
             // Kick the server accept loop
             serverSocket.close();
         } catch (IOException e) {
-            log.warn("trouble closing the server socket", e);
+            log.log(WARNING, "trouble closing the server socket", e);
         }
         // and block until worker is finished
         try {
             workerThread.join(STOP_TIMEOUT);
         } catch (InterruptedException e) {
-            log.warn("interrupted when waiting for worker thread to finish", e);
+            log.log(WARNING, "interrupted when waiting for worker thread to finish", e);
         }
     }
 
@@ -180,11 +181,11 @@ public final class Server implements AutoCloseable {
         } catch (Exception e) {
             // SocketException expected when stopping the server
             if (stopped) return;
-            log.error("hit exception when running server", e);
+            log.log(SEVERE, "hit exception when running server", e);
             try {
                 serverSocket.close();
             } catch (IOException ex) {
-                log.error("and one when closing the port", ex);
+                log.log(SEVERE, "and one when closing the port", ex);
             }
         }
     }
@@ -199,7 +200,7 @@ public final class Server implements AutoCloseable {
     private static List<Message> handleTransaction(PrintWriter out, Iterator<String> input) {
         // Initialize the state machine
         var state = State.CONNECT;
-        var smtpRequest = new Request(Action.CONNECT, "", state);
+        var smtpRequest = new Request(Stateful.CONNECT, "", state);
 
         // Execute the connection request
         var smtpResponse = smtpRequest.execute();
@@ -226,7 +227,7 @@ public final class Server implements AutoCloseable {
             sendResponse(out, response);
 
             // Store input in message
-            msg.store(response, request.params);
+            msg.store(response, request.params());
 
             // If message reception is complete save it
             if (state == State.QUIT) {

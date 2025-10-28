@@ -28,49 +28,49 @@ public class RequestTest {
 
     @Test
     public void testUnrecognizedCommandConnectState() {
-        var request = new Request(Action.UNRECOG, null, State.CONNECT);
+        var request = new Request(Stateful.UNRECOG, null, State.CONNECT);
         var response = request.execute();
         assertEquals(500, response.code());
     }
 
     @Test
     public void testUnrecognizedCommandGreetState() {
-        var request = new Request(Action.UNRECOG, null, State.GREET);
+        var request = new Request(Stateful.UNRECOG, null, State.GREET);
         var response = request.execute();
         assertEquals(500, response.code());
     }
 
     @Test
     public void testUnrecognizedCommandMailState() {
-        var request = new Request(Action.UNRECOG, null, State.MAIL);
+        var request = new Request(Stateful.UNRECOG, null, State.MAIL);
         var response = request.execute();
         assertEquals(500, response.code());
     }
 
     @Test
     public void testUnrecognizedCommandQuitState() {
-        var request = new Request(Action.UNRECOG, null, State.QUIT);
+        var request = new Request(Stateful.UNRECOG, null, State.QUIT);
         var response = request.execute();
         assertEquals(500, response.code());
     }
 
     @Test
     public void testUnrecognizedCommandRcptState() {
-        var request = new Request(Action.UNRECOG, null, State.RCPT);
+        var request = new Request(Stateful.UNRECOG, null, State.RCPT);
         var response = request.execute();
         assertEquals(500, response.code());
     }
 
     @Test
     public void testUnrecognizedCommandDataBodyState() {
-        var request = new Request(Action.UNRECOG, null, State.DATA_BODY);
+        var request = new Request(Stateful.UNRECOG, null, State.DATA_BODY);
         var response = request.execute();
         assertEquals(-1, response.code());
     }
 
     @Test
     public void testUnrecognizedCommandDataHdrState() {
-        var request = new Request(Action.UNRECOG, null, State.DATA_HDR);
+        var request = new Request(Stateful.UNRECOG, null, State.DATA_HDR);
         var response = request.execute();
         assertEquals(-1, response.code());
     }

@@ -42,113 +42,90 @@ package com.dumbster.smtp;
  * noop       | 250/CONNECT | 250/GREET | 250/MAIL  | 250/RCPT     | 250|DATA_HDR  | 250/DATA_BODY | 250/QUIT
  * </PRE>
  */
-class Request {
-    /**
-     * SMTP action received from client.
-     */
-    private final Action action;
-    /**
-     * Current state of the SMTP state table.
-     */
-    private final State state;
-    /**
-     * Additional information passed from the client with the SMTP action.
-     */
-    String params;
-
-    /**
-     * Create a new SMTP client request.
-     *
-     * @param actionType type of action/command
-     * @param params     remainder of command line once command is removed
-     * @param state      current SMTP server state
-     */
-    Request(Action actionType, String params, State state) {
-        this.action = actionType;
-        this.state = state;
-        this.params = params;
-    }
-
+record Request(Action action, String params, State state) {
     /**
      * Execute the SMTP request returning a response. This method models the state transition table for the SMTP server.
      *
-     * @return reponse to the request
+     * @return response to the request
      */
     Response execute() {
         Response response;
-        if (action.isStateless()) {
-            if (Action.EXPN == action) {
-                response = new Response(252, "Not supported", this.state);
-            } else if (Action.HELP == action) {
-                response = new Response(211, "No help available", this.state);
-            } else if (Action.NOOP == action) {
-                response = new Response(250, "OK", this.state);
-            } else if (Action.VRFY == action) {
-                response = new Response(252, "Not supported", this.state);
-            } else if (Action.RSET == action) {
-                response = new Response(250, "OK", State.GREET);
-            } else {
-                response = new Response(500, "Command not recognized", this.state);
-            }
+        if (action instanceof Stateless) {
+            response = switch (action) {
+                case Stateless.EXPN, Stateless.VRFY -> new Response(252, "Not supported", this.state);
+                case Stateless.HELP -> new Response(211, "No help available", this.state);
+                case Stateless.NOOP -> new Response(250, "OK", this.state);
+                case Stateless.RSET -> new Response(250, "OK", State.GREET);
+                default -> new Response(500, "Command not recognized", this.state);
+            };
         } else { // Stateful commands
-            if (Action.CONNECT == action) {
-                if (State.CONNECT == state) {
-                    response = new Response(220, "localhost Dumbster SMTP service ready", State.GREET);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+            switch (action) {
+                case Stateful.CONNECT -> {
+                    if (State.CONNECT == state) {
+                        response = new Response(220, "localhost Dumbster SMTP service ready", State.GREET);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else if (Action.EHLO == action) {
-                if (State.GREET == state) {
-                    response = new Response(250, "OK", State.MAIL);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+                case Stateful.EHLO -> {
+                    if (State.GREET == state) {
+                        response = new Response(250, "OK", State.MAIL);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else if (Action.MAIL == action) {
-                if (State.MAIL == state || State.QUIT == state) {
-                    response = new Response(250, "OK", State.RCPT);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+                case Stateful.MAIL -> {
+                    if (State.MAIL == state || State.QUIT == state) {
+                        response = new Response(250, "OK", State.RCPT);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else if (Action.RCPT == action) {
-                if (State.RCPT == state) {
-                    response = new Response(250, "OK", this.state);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+                case Stateful.RCPT -> {
+                    if (State.RCPT == state) {
+                        response = new Response(250, "OK", this.state);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else if (Action.DATA == action) {
-                if (State.RCPT == state) {
-                    response = new Response(354, "Start mail input; end with <CRLF>.<CRLF>", State.DATA_HDR);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+                case Stateful.DATA -> {
+                    if (State.RCPT == state) {
+                        response = new Response(354, "Start mail input; end with <CRLF>.<CRLF>", State.DATA_HDR);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else if (Action.UNRECOG == action) {
-                if (State.DATA_HDR == state || State.DATA_BODY == state) {
-                    response = new Response(-1, "", this.state);
-                } else {
-                    response = new Response(500, "Command not recognized", this.state);
+                case Stateful.UNRECOG -> {
+                    if (State.DATA_HDR == state || State.DATA_BODY == state) {
+                        response = new Response(-1, "", this.state);
+                    } else {
+                        response = new Response(500, "Command not recognized", this.state);
+                    }
                 }
-            } else if (Action.DATA_END == action) {
-                if (State.DATA_HDR == state || State.DATA_BODY == state) {
-                    response = new Response(250, "OK", State.QUIT);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+                case Stateful.DATA_END -> {
+                    if (State.DATA_HDR == state || State.DATA_BODY == state) {
+                        response = new Response(250, "OK", State.QUIT);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else if (Action.BLANK_LINE == action) {
-                if (State.DATA_HDR == state) {
-                    response = new Response(-1, "", State.DATA_BODY);
-                } else if (State.DATA_BODY == state) {
-                    response = new Response(-1, "", this.state);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+                case Stateful.BLANK_LINE -> {
+                    if (State.DATA_HDR == state) {
+                        response = new Response(-1, "", State.DATA_BODY);
+                    } else if (State.DATA_BODY == state) {
+                        response = new Response(-1, "", this.state);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else if (Action.QUIT == action) {
-                if (State.QUIT == state) {
-                    response = new Response(221, "localhost Dumbster service closing transmission channel", State.CONNECT);
-                } else {
-                    response = new Response(503, "Bad sequence of commands: " + action, this.state);
+                case Stateful.QUIT -> {
+                    if (State.QUIT == state) {
+                        response = new Response(221, "localhost Dumbster service closing transmission channel", State.CONNECT);
+                    } else {
+                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
+                    }
                 }
-            } else {
-                response = new Response(500, "Command not recognized", this.state);
+                default -> response = new Response(500, "Command not recognized", this.state);
             }
         }
         return response;
@@ -167,51 +144,47 @@ class Request {
 
         if (state == State.DATA_HDR) {
             if (s.equals(".")) {
-                action = Action.DATA_END;
+                action = Stateful.DATA_END;
             } else if (s.isEmpty()) {
-                action = Action.BLANK_LINE;
+                action = Stateful.BLANK_LINE;
             } else {
-                action = Action.UNRECOG;
+                action = Stateful.UNRECOG;
                 params = s;
             }
         } else if (state == State.DATA_BODY) {
             if (s.equals(".")) {
-                action = Action.DATA_END;
+                action = Stateful.DATA_END;
             } else {
-                action = Action.UNRECOG;
-                if (s.isEmpty()) {
-                    params = "\n";
-                } else {
-                    params = s;
-                }
+                action = Stateful.UNRECOG;
+                params = s.isEmpty() ? "\n" : s;
             }
         } else {
-            String su = s.toUpperCase();
+            var su = s.toUpperCase();
             if (su.startsWith("EHLO ") || su.startsWith("HELO")) {
-                action = Action.EHLO;
+                action = Stateful.EHLO;
                 params = s.substring(5);
             } else if (su.startsWith("MAIL FROM:")) {
-                action = Action.MAIL;
+                action = Stateful.MAIL;
                 params = s.substring(10);
             } else if (su.startsWith("RCPT TO:")) {
-                action = Action.RCPT;
+                action = Stateful.RCPT;
                 params = s.substring(8);
             } else if (su.startsWith("DATA")) {
-                action = Action.DATA;
+                action = Stateful.DATA;
             } else if (su.startsWith("QUIT")) {
-                action = Action.QUIT;
+                action = Stateful.QUIT;
             } else if (su.startsWith("RSET")) {
-                action = Action.RSET;
+                action = Stateless.RSET;
             } else if (su.startsWith("NOOP")) {
-                action = Action.NOOP;
+                action = Stateless.NOOP;
             } else if (su.startsWith("EXPN")) {
-                action = Action.EXPN;
+                action = Stateless.EXPN;
             } else if (su.startsWith("VRFY")) {
-                action = Action.VRFY;
+                action = Stateless.VRFY;
             } else if (su.startsWith("HELP")) {
-                action = Action.HELP;
+                action = Stateless.HELP;
             } else {
-                action = Action.UNRECOG;
+                action = Stateful.UNRECOG;
             }
         }
 
