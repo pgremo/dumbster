@@ -30,7 +30,6 @@ import java.util.Scanner;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.Collections.unmodifiableList;
 import static java.util.logging.Level.SEVERE;
@@ -60,7 +59,7 @@ public final class Server implements AutoCloseable {
     private static final Logger log = Logger.getLogger(Server.class.getName());
 
     /**
-     * Stores all of the email received since this instance started up.
+     * Stores all the email received since this instance started up.
      */
     private final List<Message> receivedMail;
 
@@ -165,14 +164,16 @@ public final class Server implements AutoCloseable {
             // Server: loop until stopped
             while (!stopped) {
                 // Start server socket and listen for client connections
-                try (var socket = serverSocket.accept();
-                     var input = new Scanner(new InputStreamReader(socket.getInputStream(), ISO_8859_1)).useDelimiter(CRLF);
-                     var out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), ISO_8859_1))) {
+                try (
+                        var socket = serverSocket.accept();
+                        var input = new Scanner(new InputStreamReader(socket.getInputStream(), ISO_8859_1)).useDelimiter(CRLF);
+                        var out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), ISO_8859_1))
+                ) {
 
                     synchronized (receivedMail) {
                         /*
                          * We synchronize over the handle method and the list update because the client call completes inside
-                         * the handle method and we have to prevent the client from reading the list until we've updated it.
+                         * the handle method, and we have to prevent the client from reading the list until we've updated it.
                          */
                         receivedMail.addAll(handleTransaction(out, input));
                     }
@@ -246,10 +247,10 @@ public final class Server implements AutoCloseable {
      * @param response response object
      */
     private static void sendResponse(PrintWriter out, Response response) {
-        if (response.code() <= 0) return;
         var code = response.code();
+        if (code <= 0) return;
         var message = response.message();
-        out.print(format("%d %s\r\n", code, message));
+        out.print("%d %s\r\n".formatted(code, message));
         out.flush();
     }
 }

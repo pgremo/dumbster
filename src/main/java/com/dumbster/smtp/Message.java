@@ -110,7 +110,7 @@ public class Message {
      * @param value header value
      */
     private void addHeader(String name, String value) {
-        headers.computeIfAbsent(name, k -> new ArrayList<>(1)).add(value);
+        headers.computeIfAbsent(name, _ -> new LinkedList<>()).add(value);
     }
 
     /**
@@ -122,7 +122,7 @@ public class Message {
     public String toString() {
         var msg = new StringBuilder();
         for (var entry : headers.entrySet()) {
-            for (String value : entry.getValue()) {
+            for (var value : entry.getValue()) {
                 msg.append(entry.getKey());
                 msg.append(": ");
                 msg.append(value);
