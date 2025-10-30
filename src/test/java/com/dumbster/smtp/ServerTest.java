@@ -21,6 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Transport;
@@ -139,8 +140,7 @@ public class ServerTest {
 
         msg.setFrom(new InternetAddress(from));
 
-        InternetAddress.parse(to, false);
-        msg.setRecipients(javax.mail.Message.RecipientType.TO, InternetAddress.parse(to, false));
+        msg.setRecipients(RecipientType.TO, InternetAddress.parse(to, false));
         msg.setSubject(subject);
 
         msg.setText(body);
@@ -193,7 +193,7 @@ public class ServerTest {
         msg.setSubject(subject);
         msg.setSentDate(new Date());
         msg.setText(body);
-        msg.setRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(to));
+        msg.setRecipient(RecipientType.TO, new InternetAddress(to));
         return msg;
     }
 }

@@ -23,16 +23,21 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Scanner;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static java.lang.Math.max;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.Collections.unmodifiableList;
-import static java.util.Spliterator.*;
-import static java.util.Spliterators.*;
+import static java.util.Spliterator.IMMUTABLE;
+import static java.util.Spliterator.ORDERED;
+import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -87,7 +92,7 @@ public final class Server implements AutoCloseable {
      * @throws IOException when listening on the socket causes one
      */
     public static Server start(int port) throws IOException {
-        return new Server(new ServerSocket(Math.max(port, 0)));
+        return new Server(new ServerSocket(max(port, 0)));
     }
 
     /**
@@ -202,6 +207,7 @@ public final class Server implements AutoCloseable {
     private static List<Message> handleTransaction(PrintWriter out, Iterator<String> input) {
         var messages = new ArrayList<Message>();
         var message = new Message();
+        var context = new Context(messages, message, null);
         var state = State.CONNECT;
 
         var in = Stream.concat(
@@ -212,16 +218,10 @@ public final class Server implements AutoCloseable {
             // Create request from client input and current state
             var request = Request.createRequest(line, state);
             // Execute request and create response object
-            var response = request.execute();
+            context = request.execute(context);
+            var response = context.response();
             // Move to next internal state
             state = response.nextState();
-            // Store input in message
-            message.store(state, request.params());
-            // If message reception is complete save it
-            if (state == State.DATA_END) {
-                messages.add(message);
-                message = new Message();
-            }
             // Send response to client
             sendResponse(out, response);
             if (state == State.QUIT) break;

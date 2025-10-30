@@ -48,10 +48,11 @@ record Request(Action action, String params, State state) {
      *
      * @return response to the request
      */
-    Response execute() {
+    Context execute(Context context) {
+        Response response;
 
         if (action instanceof Stateless) {
-            return switch (action) {
+            response = switch (action) {
                 case Stateless.EXPN, Stateless.VRFY -> new Response(252, "Not supported", this.state);
                 case Stateless.HELP -> new Response(211, "No help available", this.state);
                 case Stateless.NOOP -> new Response(250, "OK", this.state);
@@ -59,7 +60,6 @@ record Request(Action action, String params, State state) {
                 default -> new Response(500, "Command not recognized", this.state);
             };
         } else {
-            Response response;
             switch (action) {
                 case Stateful.CONNECT -> {
                     if (State.CONNECT == state) {
@@ -105,7 +105,9 @@ record Request(Action action, String params, State state) {
                 }
                 case Stateful.DATA_END -> {
                     if (State.DATA_HDR == state || State.DATA_BODY == state) {
+                        context.messages().add(context.message());
                         response = new Response(250, "OK", State.DATA_END);
+                        context = new Context(context.messages(), new Message(), response);
                     } else {
                         response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
                     }
@@ -124,9 +126,9 @@ record Request(Action action, String params, State state) {
                 }
                 default -> response = new Response(500, "Command not recognized", this.state);
             }
-            return response;
-
         }
+        context.message().store(response.nextState(), params());
+        return new Context(context.messages(), context.message(), response);
     }
 
     /**

@@ -21,6 +21,8 @@ package com.dumbster.smtp;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
@@ -29,50 +31,50 @@ public class RequestTest {
     @Test
     public void testUnrecognizedCommandConnectState() {
         var request = new Request(Stateful.UNRECOG, null, State.CONNECT);
-        var response = request.execute();
-        assertEquals(500, response.code());
+        var context = request.execute(new Context(new ArrayList<>(), new Message(), null));
+        assertEquals(500, context.response().code());
     }
 
     @Test
     public void testUnrecognizedCommandGreetState() {
         var request = new Request(Stateful.UNRECOG, null, State.GREET);
-        var response = request.execute();
-        assertEquals(500, response.code());
+        var context = request.execute(new Context(new ArrayList<>(), new Message(), null));
+        assertEquals(500, context.response().code());
     }
 
     @Test
     public void testUnrecognizedCommandMailState() {
         var request = new Request(Stateful.UNRECOG, null, State.MAIL);
-        var response = request.execute();
-        assertEquals(500, response.code());
+        var context = request.execute(new Context(new ArrayList<>(), new Message(), null));
+        assertEquals(500, context.response().code());
     }
 
     @Test
     public void testUnrecognizedCommandQuitState() {
         var request = new Request(Stateful.UNRECOG, null, State.QUIT);
-        var response = request.execute();
-        assertEquals(500, response.code());
+        var context = request.execute(new Context(new ArrayList<>(), new Message(), null));
+        assertEquals(500, context.response().code());
     }
 
     @Test
     public void testUnrecognizedCommandRcptState() {
         var request = new Request(Stateful.UNRECOG, null, State.RCPT);
-        var response = request.execute();
-        assertEquals(500, response.code());
+        var context = request.execute(new Context(new ArrayList<>(), new Message(), null));
+        assertEquals(500, context.response().code());
     }
 
     @Test
     public void testUnrecognizedCommandDataBodyState() {
         var request = new Request(Stateful.UNRECOG, null, State.DATA_BODY);
-        var response = request.execute();
-        assertEquals(-1, response.code());
+        var context = request.execute(new Context(new ArrayList<>(), new Message(), null));
+        assertEquals(-1, context.response().code());
     }
 
     @Test
     public void testUnrecognizedCommandDataHdrState() {
         var request = new Request(Stateful.UNRECOG, null, State.DATA_HDR);
-        var response = request.execute();
-        assertEquals(-1, response.code());
+        var context = request.execute(new Context(new ArrayList<>(), new Message(), null));
+        assertEquals(-1, context.response().code());
     }
 
 
