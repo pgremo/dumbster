@@ -19,7 +19,8 @@ package com.dumbster.smtp;
 
 import java.util.*;
 
-import static com.dumbster.smtp.State.*;
+import static com.dumbster.smtp.State.DATA_BODY;
+import static com.dumbster.smtp.State.DATA_HDR;
 import static java.util.Collections.*;
 
 /**
@@ -46,19 +47,19 @@ public class Message {
     /**
      * Update the headers or body depending on the Response object and line of input.
      *
-     * @param response Response object
+     * @param state Response object
      * @param params   remainder of input line after SMTP command has been removed
      */
-    public void store(Response response, String params) {
+    public void store(State state, String params) {
         if (params == null) return;
-        if (response.nextState() == DATA_HDR) {
-            var headerNameEnd = params.indexOf(':');
-            if (headerNameEnd >= 0) {
-                var name = params.substring(0, headerNameEnd).trim();
-                var value = params.substring(headerNameEnd + 1).trim();
-                addHeader(name, value);
+        if (state == DATA_HDR) {
+            var parts = params.split(":", 2);
+            if (parts.length > 1) {
+                headers
+                        .computeIfAbsent(parts[0].trim(), _ -> new LinkedList<>())
+                        .add(parts[1].trim());
             }
-        } else if (response.nextState() == DATA_BODY) {
+        } else if (state == DATA_BODY) {
             body.append(params);
         }
     }
@@ -69,7 +70,7 @@ public class Message {
      * @return an Iterator over the set of header names (String)
      */
     public Set<String> getHeaderNames() {
-        return unmodifiableSet(new LinkedHashSet<>(headers.keySet()));
+        return unmodifiableSet(headers.keySet());
     }
 
     /**
@@ -101,16 +102,6 @@ public class Message {
      */
     public String getBody() {
         return body.toString();
-    }
-
-    /**
-     * Adds a header to the Map.
-     *
-     * @param name  header name
-     * @param value header value
-     */
-    private void addHeader(String name, String value) {
-        headers.computeIfAbsent(name, _ -> new LinkedList<>()).add(value);
     }
 
     /**

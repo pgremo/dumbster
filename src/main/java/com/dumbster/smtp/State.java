@@ -20,7 +20,7 @@ package com.dumbster.smtp;
 /**
  * SMTP server state.
  */
-enum State {
+public enum State {
     /**
      * CONNECT state: waiting for a client connection.
      */
@@ -45,6 +45,10 @@ enum State {
      * Processing body text.
      */
     DATA_BODY,
+    /**
+     * End of a message.
+     */
+    DATA_END,
     /**
      * End of client transmission.
      */

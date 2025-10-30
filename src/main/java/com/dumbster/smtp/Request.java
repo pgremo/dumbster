@@ -49,16 +49,17 @@ record Request(Action action, String params, State state) {
      * @return response to the request
      */
     Response execute() {
-        Response response;
+
         if (action instanceof Stateless) {
-            response = switch (action) {
+            return switch (action) {
                 case Stateless.EXPN, Stateless.VRFY -> new Response(252, "Not supported", this.state);
                 case Stateless.HELP -> new Response(211, "No help available", this.state);
                 case Stateless.NOOP -> new Response(250, "OK", this.state);
                 case Stateless.RSET -> new Response(250, "OK", State.GREET);
                 default -> new Response(500, "Command not recognized", this.state);
             };
-        } else { // Stateful commands
+        } else {
+            Response response;
             switch (action) {
                 case Stateful.CONNECT -> {
                     if (State.CONNECT == state) {
@@ -75,7 +76,7 @@ record Request(Action action, String params, State state) {
                     }
                 }
                 case Stateful.MAIL -> {
-                    if (State.MAIL == state || State.QUIT == state) {
+                    if (State.MAIL == state || State.DATA_END == state) {
                         response = new Response(250, "OK", State.RCPT);
                     } else {
                         response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
@@ -104,7 +105,7 @@ record Request(Action action, String params, State state) {
                 }
                 case Stateful.DATA_END -> {
                     if (State.DATA_HDR == state || State.DATA_BODY == state) {
-                        response = new Response(250, "OK", State.QUIT);
+                        response = new Response(250, "OK", State.DATA_END);
                     } else {
                         response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
                     }
@@ -119,16 +120,13 @@ record Request(Action action, String params, State state) {
                     }
                 }
                 case Stateful.QUIT -> {
-                    if (State.QUIT == state) {
-                        response = new Response(221, "localhost Dumbster service closing transmission channel", State.CONNECT);
-                    } else {
-                        response = new Response(503, "Bad sequence of commands: %s".formatted(action), this.state);
-                    }
+                    response = new Response(221, "localhost Dumbster service closing transmission channel", State.CONNECT);
                 }
                 default -> response = new Response(500, "Command not recognized", this.state);
             }
+            return response;
+
         }
-        return response;
     }
 
     /**
@@ -159,35 +157,40 @@ record Request(Action action, String params, State state) {
                 params = s.isEmpty() ? "\n" : s;
             }
         } else {
-            var su = s.toUpperCase();
-            if (su.startsWith("EHLO ") || su.startsWith("HELO")) {
+            if (matches(s, "EHLO") || matches(s, "HELO")) {
                 action = Stateful.EHLO;
                 params = s.substring(5);
-            } else if (su.startsWith("MAIL FROM:")) {
+            } else if (matches(s, "MAIL FROM:")) {
                 action = Stateful.MAIL;
                 params = s.substring(10);
-            } else if (su.startsWith("RCPT TO:")) {
+            } else if (matches(s, "RCPT TO:")) {
                 action = Stateful.RCPT;
                 params = s.substring(8);
-            } else if (su.startsWith("DATA")) {
+            } else if (matches(s, "DATA")) {
                 action = Stateful.DATA;
-            } else if (su.startsWith("QUIT")) {
+            } else if (matches(s, "QUIT")) {
                 action = Stateful.QUIT;
-            } else if (su.startsWith("RSET")) {
+            } else if (matches(s, "RSET")) {
                 action = Stateless.RSET;
-            } else if (su.startsWith("NOOP")) {
+            } else if (matches(s, "NOOP")) {
                 action = Stateless.NOOP;
-            } else if (su.startsWith("EXPN")) {
+            } else if (matches(s, "EXPN")) {
                 action = Stateless.EXPN;
-            } else if (su.startsWith("VRFY")) {
+            } else if (matches(s, "VRFY")) {
                 action = Stateless.VRFY;
-            } else if (su.startsWith("HELP")) {
+            } else if (matches(s, "HELP")) {
                 action = Stateless.HELP;
+            } else if (matches(s, "CONNECT")) {
+                action = Stateful.CONNECT;
             } else {
                 action = Stateful.UNRECOG;
             }
         }
 
         return new Request(action, params, state);
+    }
+
+    private static boolean matches(String target, String pattern) {
+        return target.regionMatches(true, 0, pattern, 0, pattern.length());
     }
 }

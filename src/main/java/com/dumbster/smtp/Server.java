@@ -23,15 +23,16 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.Collections.unmodifiableList;
+import static java.util.Spliterator.*;
+import static java.util.Spliterators.*;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -199,45 +200,34 @@ public final class Server implements AutoCloseable {
      * @return List of Message
      */
     private static List<Message> handleTransaction(PrintWriter out, Iterator<String> input) {
-        // Initialize the state machine
+        var messages = new ArrayList<Message>();
+        var message = new Message();
         var state = State.CONNECT;
-        var smtpRequest = new Request(Stateful.CONNECT, "", state);
 
-        // Execute the connection request
-        var smtpResponse = smtpRequest.execute();
-
-        // Send initial response
-        sendResponse(out, smtpResponse);
-        state = smtpResponse.nextState();
-
-        var msgList = new ArrayList<Message>();
-        var msg = new Message();
-
-        while (state != State.CONNECT) {
-            var line = input.next();
-
-            if (line == null) break;
-
+        var in = Stream.concat(
+                Stream.of("CONNECT"),
+                StreamSupport.stream(spliteratorUnknownSize(input, ORDERED | IMMUTABLE), false)
+        );
+        for (var line : (Iterable<String>) in::iterator) {
             // Create request from client input and current state
             var request = Request.createRequest(line, state);
             // Execute request and create response object
             var response = request.execute();
             // Move to next internal state
             state = response.nextState();
+            // Store input in message
+            message.store(state, request.params());
+            // If message reception is complete save it
+            if (state == State.DATA_END) {
+                messages.add(message);
+                message = new Message();
+            }
             // Send response to client
             sendResponse(out, response);
-
-            // Store input in message
-            msg.store(response, request.params());
-
-            // If message reception is complete save it
-            if (state == State.QUIT) {
-                msgList.add(msg);
-                msg = new Message();
-            }
+            if (state == State.QUIT) break;
         }
 
-        return msgList;
+        return messages;
     }
 
     /**
